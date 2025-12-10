@@ -18,17 +18,11 @@ The **data_transformations** project manages ETL processes with **Dagster** for 
    ```bash
    make install
    ```
-
    After this, your environment will be ready for development.
 
 ## Running the Project Locally
 
 1. **Set Environment Variables**
-   Copy the contents of `.env.example` to `.env` file using following Linux command and set the values of these variables:
-
-    ```bash
-   cp ./.env.example ./.env
-   ```
 
 2. **Start Dagster Server**
    To run the Dagster server locally:
@@ -65,9 +59,6 @@ The **data_transformations** project manages ETL processes with **Dagster** for 
 
 - **pyproject.toml**
   Central configuration file specifying dependencies, project metadata, and settings.
-
-- **.gitignore**
-  Specifies files and directories for Git to ignore.
 
 - **Makefile**
   Provides various commands for project setup, testing, linting, and more.
