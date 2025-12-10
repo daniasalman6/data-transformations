@@ -1,0 +1,551 @@
+version: 2
+
+models:
+  ## NOTE:
+  #
+  ## Using Decimal(76, 38) for fields defined using google.type.Decimal, in which case the range of values is that of BigDecimal in Java which supports extremely large values. In ClickHouse, the maximum precision allowed is 76 digits. To maintain a balance between precision and scale, a configuration of (76, 38) is used, allowing for 38 digits before and after the decimal point.
+  #
+  ## Using Decimal(29, 9) for fields defined with google.type.Money, ensuring that the digits before the decimal point fit within the int64 limit (i.e., 20 digits) while maintaining 9 digits after the decimal point, resulting in the choice of Decimal(29, 9).
+
+  - name: hist_ledger__utilizations
+    description: "Stores historical records of utilizations from the Ledger database. Each record includes a limit ID, which originates from the limits table and serves as a foreign key. The limits table defines limits for a specific entity, such as a product or account. The utilization table references this limit ID to track how much of the limit has been used, along with its denomination and the last update or reset timestamp."
+    columns:
+      - name: limit_id
+        description: "Serves as a foreign key referencing the limits table and acts as the primary key for utilizations table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: value
+        description: "The value utilized from the available limit"
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: denomination
+        description: "The currency for the value utilized"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: last_reset
+        description: "The timestamp at which the utilization was last reset"
+        data_type: DateTime64(6, 'GMT')
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the utilization record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the utilization record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__accounts
+    description: "Stores historical records of accounts from the Ledger database. Each record provides a detailed description of an account, including its ID, status, type (whether main or escrow), currency, associated products, and the chart of accounts it belongs to. It also includes additional limit dimensions, account metadata detailing account activity, and metadata related to its creation and updates."
+    columns:
+      - name: id
+        description: "The account ID which serves as the primary key of accounts table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: type
+        description: "The type of account this is, MAIN or ESCROW"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_types') }}"
+      - name: status
+        description: "The current status of the account, CREATED, ACTIVE, CLOSED, PENDING, SUSPENDED or MIGRATING"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_status') }}"
+      - name: currency
+        description: "The currency associated with the account e.g. PKR, CAD"
+        data_type: LowCardinality(String)
+        data_tests:
+         - not_null
+      - name: name
+        description: "The name of the account holder"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "The product ID of the product definition associated with the account"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: metadata
+        description: "The account metadata is a JSON-encoded string column that contains detailed information about the account, including fields such as the product name, any due payments (if applicable), and other relevant details based on the product the account is associated with as key-value pairs."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the account's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the account's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: reference
+        data_type: String
+        description: "A unique string identifier used to reference the account instead of a UUID, ensuring consistency during account creation retries."
+      - name: coa_id
+        data_type: UUID
+        description: "The chart of account ID this account is associated with"
+        data_tests:
+          - not_null
+      - name: lcy
+        data_type: LowCardinality(String)
+        description: "Represents the local currency, e.g. PKR."
+        data_tests:
+          - not_null
+      - name: limit_dimensions
+        description: "Stores additional information for the entity which can be used to apply limits in a JSON-encoded string."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: account_metadata_schema
+        description: "Defines a format for the account's metadata to adhere to a specific schema in a JSON-encoded string. If any constraints in this schema are violated during account creation, the creation process will fail."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: revision
+        data_type: UUID
+        description: "Consists of a unique ID, which corresponds to a specific version of a Data Transfer Object (DTO)."
+        data_tests:
+          - not_null
+      - name: operational_instruction
+        description: "Specifies the account operation mode (e.g., Single, Jointly, Survivor, etc.). It determines the approval logic for transactions, account closure, and other account related operations."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the account record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the account record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__aliases
+    description: "Stores historical records of aliases from the Ledger databse. Each record includes an account ID, represented as a UUID. To simplify account referencing without relying on the UUID, aliases such as IBAN or phone number are associated with each account ID. Each record also specifies the alias type, its active status, and metadata related to its creation and updates."
+    columns:
+      - name: id
+        description: "The alias id which serves as the primary key for the aliases table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: account_id
+        data_type: UUID
+        description: "The id associated with the account whose alias is being defined"
+        data_tests:
+          - not_null
+      - name: alias
+        data_type: String
+        description: "The alias value"
+        data_tests:
+          - not_null
+      - name: alias_type
+        data_type: LowCardinality(String)
+        description: "Signifies the type of alias e.g. some integer ID, phone number or IBAN"
+        data_tests:
+          - not_null
+      - name: active
+        data_type: Bool
+        description: "A boolean value that tells whether the account is active or not"
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the alias' creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the alias."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the alias' updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the alias."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the alias record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the alias record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__limits
+    description: "Stores historical records of limits from the Ledger database. Each record specifies the entity to which the limit applies, such as an Account or Product, and indicates whether it is a transaction limit or an account limit at the time of creation. Additionally, it provides flexibility to store supplementary details related to limit application, define upper and lower bounds, and maintain metadata on record creation and updates."
+    columns:
+      - name: id
+        description: "The limit ID which serves as the primary key for this table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: entity_id
+        description: "The id of the entity for whom the limits are being defined e.g. Account ID."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: entity_type
+        description: "Signifies what the entity is e.g. ACCOUNT or PRODUCT"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('limits_entity_types') }}"
+      - name: context
+        description: "Indicates when a limit applies. Limits with txn context are applied during transactions while limits with account_creation context apply during creation of accounts."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('limits_context') }}"
+      - name: limit_metadata
+        description: "Based on the type of limit, it stores type specific information in a JSON-encoded String. For example, in case of velocity limits, it consists of reset_cron which defines the intervals at which a limit will be reset."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: dimensions
+        data_type: String
+        description: "Stores additional information related to an account or transaction in a JSON-encoded String that would be used to apply limits to these entities"
+        data_tests:
+          - not_null
+      - name: value
+        data_type: Decimal(76, 38)
+        description: "The exact value of the limit"
+        data_tests:
+          - not_null
+      - name: denomination
+        data_type: LowCardinality(String)
+        description: "The currency of the limit defined"
+        data_tests:
+          - not_null
+      - name: utilization_change
+        data_type: LowCardinality(String)
+        description: "It is the value by which utilization will increase. On execution of every action (transaction or account_creation), the utilization increases by the amount of utilization_change specified."
+        data_tests:
+          - not_null
+      - name: upper_tolerance
+        data_type: Decimal(76, 38)
+        description: "Specifies the maximum acceptable limit that can be set for an entitiy"
+        data_tests:
+          - not_null
+      - name: lower_tolerance
+        data_type: Decimal(76, 38)
+        description: "Specifies the minimum acceptable limit that can be set for an entity"
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the limit's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the limit."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the limit's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the limit."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the limit record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the limit record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__owners
+    description: "Stores historical records of owners from the Ledger database. Each record establishes a link between an account ID and an owner ID, representing the entity that owns the account—either SYSTEM or CUSTOMER. The table also defines the owner type and includes metadata related to the record's creation."
+    columns:
+      - name: account_id
+        description: "The account id associated with the owner."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: owner_id
+        description: "The owner who the account belongs to."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: owner_type
+        data_type: LowCardinality(String)
+        description: "The type of owner, can be either CUSTOMER or SYSTEM."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('owner_types') }}"
+      - name: create_metadata
+        description: "Stores metadata related to the record's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the record."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: owner_category
+        description: "Consists of an owner category—such as PRIMARY or SECONDARY—that determines the actions an owner is authorized to perform on an account."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the owner's record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the owner's record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__splits
+    description: "Stores historical records of splits from the Ledger database. Each record captures a transaction along with its splits and associated accounts. It also includes details of multiple currencies, split amounts in those currencies, and the applicable exchange rates. Additionally, it records a narration describing the purpose of transaction and the net balance change before and after transaction."
+    columns:
+      - name: id
+        description: "The split ID which serves as the primary key for the splits table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: account_id
+        description: "The ID of account associated with the split"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: transaction_id
+        description: "The ID of the transaction associated with the split"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: type
+        description: "Indicates whether the split is credit or debit"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('split_types') }}"
+      - name: acy
+        description: "The account currency that varies with each account"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: lcy
+        description: "Represent the local_currency which is the default currency of ledger"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: acy_amount
+        description: "The split amount expressed in the actual account currency type."
+        data_type: Decimal(29, 9)
+        data_tests:
+          - not_null
+          - assert_value_greater_than_zero
+      - name: lcy_amount
+        description: "The split amount expressed in the local currency type."
+        data_type: Decimal(29, 9)
+        data_tests:
+          - not_null
+          - assert_value_greater_than_zero
+      - name: rate
+        description: "The currency exchange rate between acy and lcy currencies"
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: narration
+        description: "Provides context and explains the purpose of the transaction split."
+        data_type: String
+      - name: metadata
+        description: "The metadata showing account and transaction details in a JSON-encoded String"
+        data_type: String
+      - name: limit_dimensions
+        description: "A JSON-encoded string that stores additional information that are used to apply limits"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: previous_split_id
+        description: "Stores the last split ID for an account, if available; otherwise, this field remains null for the first split."
+        data_type: Nullable(UUID)
+      - name: acy_balance_previous
+        description: "Stores the balance that existed before this split was applied in the account currency."
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: lcy_balance_previous
+        description: "Stores the balance that existed before this split was applied in the local currency."
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: acy_balance_current
+        description: "Stores the balance that existed after this split was applied in the account currency."
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: lcy_balance_current
+        description: "Stores the balance that existed after this split was applied in the local currency."
+        data_type: Decimal(76, 38)
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the split record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the split record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__transactions
+    description: "Stores historical records of transactions from the Ledger database. Each record contains only successful transactions, including the transaction request ID, a unique reference string, narration describing the transaction's purpose, effective date when it impacts the ledger, and the record's creation metadata."
+    columns:
+      - name: id
+        description: "The transaction ID which serves as the primary key for the transactions table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: request_id
+        description: "ID of the transaction request"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: reference
+        description: "A unique reference string used to handle transaction retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the transaction's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the transaction."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: metadata
+        description: "Metadata of the transaction in a JSON-encoded String."
+        data_type: String
+      - name: narration
+        description: "Provides context and explains the purpose of the transaction."
+        data_type: String
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the transaction record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the transaction record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_ledger__limit_groups
+    description: "Stores historical records of limit_groups from the Ledger database. Each record represents a limit group used to enforce limits collectively at various levels, such as account, account owner, or product. Each limit group includes a members_type to specify the type of members it applies to, along with the associated member UUIDs for each type in a list, as well as the record's creation metadata."
+    columns:
+      - name: id
+        description: "The limit group ID which serves as the primary key for limit_groups table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: name
+        description: "Name of the limit group"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: members_type
+        description: "Indicates what type of member the limit_group would have e.g. Accounts, Account Owners or Products"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('limit_group_member_types') }}"
+      - name: members
+        description: "A list of UUIDs representing all members of a specific member type."
+        data_type: Array(UUID)
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the record's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the record."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the limit_group record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the limit_group record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null

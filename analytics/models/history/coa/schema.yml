@@ -1,0 +1,274 @@
+version: 2
+
+models:
+  - name: hist_coa__coas
+    description: "Stores historical records of Chart of Accounts (COA) from the COA database. Each record stores a COA id along with its currency."
+    columns:
+      - name: id
+        description: "The coa UUID, a primary key of the coas table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: base_currency
+        description: "The currency for the COA, which applies to all general ledgers and their associated accounts."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the coa record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the coa was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_coa__draft_accounts
+    description: "Stores historical records of draft_accounts from the COA database. Each record contains a draft account ID, along with details indicating whether an actual account has been created for the draft. It also includes metadata capturing information provided during draft account creation, as well as creation and update metadata for the record. Draft accounts allow for validation and modification of parameters before finalizing the account. Once an actual account is created from a draft, certain parameters can no longer be updated."
+    columns:
+      - name: id
+        description: "The draft account id which is also the primary key of draft_accounts table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: requested
+        description: "A boolean field that indicates whether a request has been made for this draft account in Turbine."
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: metadata
+        description: "A JSON-encoded string containing additional details about the creation and update of the draft account. It may include information such as the account name, associated product, any provided alias, and the account's currency."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the draft account's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the draft account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to draft account's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the draft account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the draft account record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the draft account was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_coa__gl_accounts
+    description: "Stores historical records of General Ledger (GL) Accounts from the COA database. Each record contains an account ID, its associated general ledger, and the COA ID to which the general ledger belongs, along with creation and update metadata."
+    columns:
+      - name: account_id
+        description: "The account id which is also the primary key of gl_accounts table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: gl_id
+        description: "The ID of the general ledger to which the account is directly linked."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: coa_id
+        description: "The COA ID that the general ledger is associated with."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the gl account's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the gl account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to gl account's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the gl account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the gl account record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the gl account was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_coa__gl_aliases
+    description: "Stores historical records of General Ledger (GL) Aliases from the COA database. Each record includes the UUID of the general ledger, a string alias for reference, and creation metadata."
+    columns:
+      - name: gl_id
+        description: "The GL id which is also the primary key of gl_aliases table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: alias
+        description: "An alternate name or reference alias for the general ledger account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the gl alias' creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the gl alias."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the gl alias record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the gl alias was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_coa__gl_drafts
+    description: "Stores historical records of General Ledger (GL) Drafts from the COA database. Each record captures the association between a draft account, a GL, and a COA, along with metadata for creation and updates."
+    columns:
+      - name: account_id
+        description: "The draft account id which is also the primary key of gl_drafts table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: gl_id
+        description: "ID of the GL linked to this account."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: coa_id
+        description: "ID of the COA that encompasses the GL."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the gl draft's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the gl draft."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to gl draft's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the gl draft."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the gl draft record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the gl draft was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_coa__gls
+    description: "Stores historical records of General Ledgers (GLs) from the COA database. Each record contains a GL ID, a hierarchical list of its parent GLs, name and description of the GL, its impact on credit (increasing or decreasing), its active status, and its creation and update metadata."
+    columns:
+      - name: id
+        description: "The GL id which is also the primary key of gls table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: tree
+        description: "A hierarchical representation of GLs, detailing all parent GLs for a given GL in a tree structure, stored as a string."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: name
+        description: "Name of the GL."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: description
+        description: "Detailed description of the general ledger account."
+        data_type: String
+      - name: credit_increase
+        description: "A boolean field indicating whether the general ledger account increases the balance on a credit transaction (true) or on a debit transaction (false)."
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the gl's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the gl."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to gl's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the gl."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: status
+        description: "Tells whether the GL is ACTIVE or INACTIVE"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('gl_status_types') }}"
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the gl record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the gl was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null

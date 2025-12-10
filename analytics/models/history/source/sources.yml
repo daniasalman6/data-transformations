@@ -1,0 +1,87 @@
+version: 2
+
+sources:
+  - name: airbyte_tables
+    schema: hist_customer
+    tables:
+      - name: _airbyte_raw_customers
+      - name: _airbyte_raw_type_definitions
+      - name: _airbyte_raw_key_definitions
+      - name: _airbyte_raw_attributes
+      - name: _airbyte_raw_credentials
+      - name: _airbyte_raw_unverified_customers
+      - name: _airbyte_raw_sign_in_attributes
+      - name: _airbyte_raw_sign_in_attribute_verifications
+
+  - name: airbyte_tables
+    schema: hist_approval
+    tables:
+      - name: _airbyte_raw_approvals
+
+  - name: airbyte_tables
+    schema: hist_audit
+    tables:
+      - name: _airbyte_raw_events
+
+  - name: airbyte_tables
+    schema: hist_ledger
+    tables:
+      - name: _airbyte_raw_accounts
+      - name: _airbyte_raw_aliases
+      - name: _airbyte_raw_limits
+      - name: _airbyte_raw_owners
+      - name: _airbyte_raw_splits
+      - name: _airbyte_raw_transactions
+      - name: _airbyte_raw_utilizations
+      - name: _airbyte_raw_limit_groups
+      - name: _airbyte_raw_account_balance_splits
+
+  - name: airbyte_tables
+    schema: hist_turbine
+    tables:
+      - name: _airbyte_raw_account_requests
+      - name: _airbyte_raw_request_session_attributes
+      - name: _airbyte_raw_callbacks
+      - name: _airbyte_raw_tasks
+      - name: _airbyte_raw_txn_requests
+      - name: _airbyte_raw_migration_requests
+      - name: _airbyte_raw_account_migration_requests
+      - name: _airbyte_raw_batches
+      - name: _airbyte_raw_txn_request_sessions
+
+  - name: airbyte_tables
+    schema: hist_coa
+    tables:
+      - name: _airbyte_raw_coas
+      - name: _airbyte_raw_draft_accounts
+      - name: _airbyte_raw_gl_accounts
+      - name: _airbyte_raw_gl_aliases
+      - name: _airbyte_raw_gl_drafts
+      - name: _airbyte_raw_gls
+
+  - name: airbyte_tables
+    schema: hist_policy
+    tables:
+      - name: _airbyte_raw_policies
+      - name: _airbyte_raw_policy_tags
+      - name: _airbyte_raw_rules
+
+  - name: airbyte_tables
+    schema: hist_product_definition
+    tables:
+      - name: _airbyte_raw_activations
+      - name: _airbyte_raw_component_groups
+      - name: _airbyte_raw_components
+      - name: _airbyte_raw_handlers
+      - name: _airbyte_raw_product_definitions
+      - name: _airbyte_raw_system_settings
+
+  - name: airbyte_tables
+    schema: hist_tagging
+    tables:
+      - name: _airbyte_raw_tagging
+
+  - name: airbyte_tables
+    schema: hist_parameter
+    tables:
+      - name: _airbyte_raw_parameters

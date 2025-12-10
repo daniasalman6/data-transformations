@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: profit_loss_statement
+    description: "Aggregates GL balances to generate the Profit & Loss statement, calculating income, expenses, and net profit."
+    columns:
+      - name: name
+        description: "Name of the General Ledger (GL) account."
+        data_tests:
+          - not_null
+      - name: label
+        description: "Full hierarchical path of the GL account, used for display."
+        data_tests:
+          - not_null
+          - unique
+      - name: balance
+        description: "Final balance for the GL account after applying debits and credits/Net Profit calculation, available only for the Net Profit row."
+        data_tests:
+          - not_null

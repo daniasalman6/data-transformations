@@ -1,0 +1,112 @@
+[tool.poetry]
+name = "data_transformations"
+version = "0.0.1"
+description = "This project manages ETL processes through Dagster and Dbt"
+authors = ["Muhammad Danial Mirza <danial.mirza@din.global>"]
+repository = "https://github.com/din-global/data-transformations"
+readme = "README.md"
+packages = [
+  {include = "data_transformations"}
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+dagster = "^1.10.0"
+dagster-dbt = "^0.26.0"
+dbt-clickhouse = "^1.8.6"
+requests = "2.32.3"
+PyYAML = "6.0.2"
+dagster-postgres = "^0.26" # required by dagster
+pydantic = "2.10.6"
+clickhouse-connect = "^0.8"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^6.0.0"
+pytest-mock = "^3.14.0"
+deptry = "^0.23.0"
+pyright = "^1.1.396"
+pre-commit = "^4.0.0"
+tox = "^4.11.1"
+dagster-webserver = "^1.10.0"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.4.2"
+mkdocs-material = "^9.2.7"
+mkdocstrings = {extras = ["python"], version = "^0.26.1"}
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.dagster]
+module_name = "data_transformations.definitions"
+code_location_name = "data_transformations"
+
+[tool.pyright]
+include = ["data_transformations"]
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+fix = true
+select = [
+    # flake8-2020
+    "YTT",
+    # flake8-bandit
+    "S",
+    # flake8-bugbear
+    "B",
+    # flake8-builtins
+    "A",
+    # flake8-comprehensions
+    "C4",
+    # flake8-debugger
+    "T10",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # mccabe
+    "C90",
+    # pycodestyle
+    "E", "W",
+    # pyflakes
+    "F",
+    # pygrep-hooks
+    "PGH",
+    # pyupgrade
+    "UP",
+    # ruff
+    "RUF",
+    # tryceratops
+    "TRY",
+]
+ignore = [
+    # LineTooLong
+    "E501",
+    # DoNotAssignLambda
+    "E731",
+]
+
+[tool.ruff.format]
+preview = true
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+source = ["data_transformations"]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["dbt-clickhouse", "dagster-postgres", "dagster-clickhouse"]

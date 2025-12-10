@@ -1,0 +1,412 @@
+version: 2
+
+models:
+  ## NOTE:
+  #
+  ## Using Decimal(76, 38) for fields defined using google.type.Decimal, in which case the range of values is that of BigDecimal in Java which supports extremely large values. In ClickHouse, the maximum precision allowed is 76 digits. To maintain a balance between precision and scale, a configuration of (76, 38) is used, allowing for 38 digits before and after the decimal point.
+  #
+  ## Using Decimal(29, 9) for fields defined with google.type.Money, ensuring that the digits before the decimal point fit within the int64 limit (i.e., 20 digits) while maintaining 9 digits after the decimal point, resulting in the choice of Decimal(29, 9).
+
+  - name: hist_turbine__request_session_attributes
+    description: "Stores historical records of request_session_attributes from the Turbine database. Each record consists of a request_id, an attribute, its value that and the record's creation and update metadata. The value is used by handlers that are using the request session as a shared storage."
+    columns:
+      - name: request_id
+        description: "The id of the account or transaction request being made in turbine"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: attribute
+        description: "It specifies the type of attribute."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: value
+        description: "The specific value corresponding to the defined attribute type."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the request session attribute's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the request session attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the request session attribute's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the request session attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the request session attribute record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the request session attribute record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_turbine__tasks
+    description: "Stores historical records of tasks from the Turbine database. Each record contains information about a task, which is an instance of a handler. It includes the request ID associated with the task, an event occurring for the given request (such as account or transaction initialization), task's status, and a reason for that status along with it's create and update timestamps."
+    columns:
+      - name: id
+        description: "The id of the task, also serves as the primary key for tasks table."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: request_id
+        description: "The request ID for which the task is being executed."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: event
+        description: "Indicates the action being executed by the task, such as transaction initialization followed by the transaction itself in a transaction request."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: parent
+        description: "Maintains a hierarchy of task IDs to determine if the task had a preceding parent task. If no parent exists, the task is considered its own parent, and the child node also includes the task's own ID."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: status
+        description: "Signifies the current status of the task e.g, WAITING, FAILED, FINISHED or IN_PROGRESS"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('task_status_types') }}"
+      - name: join_parent
+        description: "A boolean field which is true if the task has a parent task and flase otherwise"
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: reference
+        description: "A unique reference string used to handle task execution retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: status_reason
+        description: "Specifies the reason for the status, such as in the case of failure, where it explains why the task failed—whether due to a missing handler or verification issues, or other factors."
+        data_type: String
+      - name: task_metadata
+        description: "Contains details such as whether the task was part of a batch, in which case it includes a batch key and batch ID, the type of request (e.g., account or transaction), and any other relevant information necessary for executing the task in a JSON-encoded string."
+        data_type: String
+      - name: create_date
+        description: "The timestamp for when the task was first created at"
+        data_type: DateTime64(6, 'GMT')
+        data_tests:
+          - not_null
+      - name: update_date
+        description: "The timestamp for when the task was first updated at"
+        data_type: Nullable(DateTime64(6, 'GMT'))
+      - name: executor_id
+        description: "Since Turbine runs on multiple instances, it is essential to track which instance executed a particular task. The executor ID serves this purpose, identifying the specific Turbine instance that processed the task. Each task is executed by only one instance."
+        data_type: Nullable(UUID)
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the task record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the task record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_turbine__txn_requests
+    description: "Stores historical records of txn_requests from the Turbine database. Each record provides detailed information about the type of transaction, the accounts involved (source and destination), associated currency, transaction amount, and its direction (Egress, Ingress or Internal). It also includes supplementary metadata for the request, along with creation and update metadata."
+    columns:
+      - name: id
+        description: "The ID of the transaction request made, also serves as the primary key for txn_requests table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: txn_code
+        description: "Indicates the transaction type based on the product, such as DBANK_TO_1LINK."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: from_account
+        description: "The account ID which made the transaction"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: from_account_ref_type
+        description: "Specifies the type of reference used to identify the account initiating the transaction instead of a UUID, such as ACCOUNT_ALIAS."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_ref_types') }}"
+      - name: to_account
+        description: "The account ID receiving the transaction."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: to_account_ref_type
+        description: "Specifies the type of reference used to identify the account receiving the transaction instead of a UUID, such as ACCOUNT_ALIAS"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_ref_types') }}"
+      - name: currency
+        description: "The currency in which the transaction is made"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: amount
+        description: "The amount of transaction made"
+        data_type: Decimal(29, 9)
+        data_tests:
+          - not_null
+      - name: event_trace
+        description: "A deprecated JSON-encoded string field which was previously used for debugging purposes using traces."
+        data_type: String
+      - name: direction
+        description: "Specifies whether the transaction is internal or external, categorizing it as either Egress or Ingress."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('txn_direction_types') }}"
+      - name: status
+        description: "Signifies the status of the transaction, e.g. FAILED, PENDING, COMPLETED"
+        data_type: LowCardinality(String)
+        data_tests:
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "Specifies the reason for a transaction failure."
+        data_type: String
+        data_tests:
+          - status_reason_not_null:
+              column_name: "status_reason"
+              status_column: "status"
+      - name: associated_txn_request
+        description: "Stores the UUID of the associated child or parent transaction if one exists, such as in an INGRESS transaction where the parent represents the initiating transaction and the child represents the receiving transaction."
+        data_type: Nullable(UUID)
+      - name: associated_txn_type
+        description: "Indicates the type of associated transaction, specifying whether it is a parent or a child transaction."
+        data_type: String
+      - name: request_metadata
+        description: "Contains request-related details in a JSON-encoded string made by an account."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the transaction request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the transaction request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the transaction request's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the transaction request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: process_metadata
+        description: "Stores metadata generated during transaction processing in a JSON-encoded string, which may update as the transaction status changes."
+        data_type: String
+      - name: pre_txn_status
+        description: "Certain products require pre-transaction checks. If this status is marked as completed, it indicates that the checks have passed and the transaction can proceed. If it fails, the transaction cannot be processed."
+        data_type: LowCardinality(Nullable(String))
+        data_tests:
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: batch_id
+        description: "When transactions are processed in batches, this field stores the batch ID associated with each transaction."
+        data_type: Nullable(UUID)
+      - name: reference
+        description: "A unique reference string used to handle transaction request retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the transaction request record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the transaction request record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_turbine__migration_requests
+    description: "Stores historical records of migration_requests from the Turbine database. Each record contains a request ID, ID of the product being migrated from, and ID of the product being migrated to. It also includes the migration status, reason for that status, and metadata fields for creation, updates, requests, and any other supplementary information."
+    columns:
+      - name: id
+        description: "The migration request ID which also serves as the primary key for migration_requests table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: from_product
+        description: "The existing product ID of product associated with the account"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: to_product
+        description: "The ID of the product to which account wants to migrate to"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: status
+        description: "Shows the failed or completed status of the migration"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "Shows the reason if it fails and a success message if it's completed"
+        data_type: String
+      - name: request_metadata
+        description: "Shows the metadata of a request made in a JSON-encoded string."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: migration_metadata
+        description: "Contains migration-related metadata, such as current and desired counts, stored in a JSON-encoded string."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the migration request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the migration request's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the migration request record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the migration request record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_turbine__account_migration_requests
+    description: "Stores historical records of account_migration_requests from the Turbine database. This table records all product definition migrations at the account level. Each entry includes the account ID undergoing migration, the migration ID representing the specific transition from one product to another (applicable to all accounts with that product), migration status, reason for that status, and metadata for creation and updates."
+    columns:
+      - name: id
+        description: "The id for account migration which also serves as the primary key for account_migration_requests table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: account_id
+        description: "The account ID to which the migration is applicable."
+        data_type: Nullable(UUID)
+      - name: migration_id
+        description: "The migration ID representing the transition from one product to another."
+        data_type: Nullable(UUID)
+      - name: status
+        description: "Shows the failed or completed status of the migration for an account"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "Indicates the reasons behind a status, whether it is completed, failed, or otherwise."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the account migration request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the account migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the account migration request's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the account migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the migration request record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the migration request record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_turbine__batches
+    description: "Stores historical records of batches from the Turbine database. This table stores the batch ID, the file path containing the requests, and the creation and update metadata. The batching functionality enables a single gRPC call for a batch of transactions."
+    columns:
+      - name: id
+        description: "The ID of the batch, also serves as the primary key for batches table"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: file_path
+        description: "The file path on an FTP server storing a batch of transactions."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the batch's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the batch."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the batch's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the batch."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the batch record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the batch record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null

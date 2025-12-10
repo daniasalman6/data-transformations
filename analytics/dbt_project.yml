@@ -1,0 +1,139 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'analytics'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'dcore'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# In this example config, we tell dbt to build all models in the example/
+# directory as views. These settings can be overridden in the individual model
+# files using the `{{ config(...) }}` macro.
+models:
+  analytics:
+
+    history:
+      +materialized: materialized_view
+      +engine: "MergeTree()"
+      +partition_by: "toYYYYMMDD(parseDateTimeBestEffortOrZero(JSONExtractString(_airbyte_data, '_ab_cdc_updated_at')))"
+
+
+      customer:
+        +schema: hist_customer
+
+      audit:
+        +schema: hist_audit
+
+      approval:
+        +schema: hist_approval
+
+      ledger:
+        +schema: hist_ledger
+
+      turbine:
+        +schema: hist_turbine
+
+      coa:
+        +schema: hist_coa
+
+      policy:
+        +schema: hist_policy
+
+      product_definition:
+        +schema: hist_product_definition
+
+      tagging:
+        +schema: hist_tagging
+
+      parameter:
+        +schema: hist_parameter
+
+    raw:
+      +materialized: view
+
+      customer:
+        +schema: raw_customer
+
+      audit:
+        +schema: raw_audit
+
+      approval:
+        +schema: raw_approval
+
+      ledger:
+        +schema: raw_ledger
+
+      turbine:
+        +schema: raw_turbine
+
+      coa:
+        +schema: raw_coa
+
+      policy:
+        +schema: raw_policy
+
+      product_definition:
+        +schema: raw_product_definition
+
+      tagging:
+        +schema: raw_tagging
+
+      parameter:
+        +schema: raw_parameter
+
+    bombe:
+      +materialized: view
+      +schema: bombe
+
+    financial_reports:
+      +materialized: ephemeral
+      +schema: financial_reports
+
+
+vars:
+  req_status_types: ['UNSPECIFIED', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'PARENTAL']
+  account_ref_types: ['UNSPECIFIED', 'ACCOUNT_ALIAS', 'INSTRUMENT_CODE']
+  task_status_types: ['WAITING', 'FINISHED', 'FAILED', 'IN_PROGRESS', 'OPEN', 'UNSPECIFIED']
+  txn_direction_types: ['INGRESS', 'EGRESS', 'INTERNAL', 'UNSPECIFIED']
+  txn_req_status_types: ['COMPLETED', 'FAILED', 'IN_PROGRESS', 'PENDING', 'PARENTAL', 'MIGRATING']
+  parameter_languages: ['GROOVY', 'UNSPECIFIED']
+  approval_status_types: ['DENIED', 'APPROVED', 'IN_PROGRESS', 'REVIEW', 'PENDING', 'UNSPECIFIED']
+  approval_method_types: ['AUTO', 'MANUAL', 'UNSPECIFIED']
+  actor_types: ['CRM_AGENT', 'SERVICE', 'CUSTOMER', 'UNSPECIFIED']
+  status_types: ['FAILED', 'COMPLETED', 'UNSPECIFIED']
+  account_types: ['MAIN', 'ESCROW', 'UNSPECIFIED']
+  account_status: ['CREATED', 'ACTIVE', 'CLOSED', 'PENDING', 'SUSPENDED', 'MIGRATING', 'UNSPECIFIED']
+  limits_entity_types: ['ACCOUNT', 'ACCOUNT_OWNER', 'PRODUCT', 'GROUP', 'UNSPECIFIED']
+  limits_context: ['TXN', 'ACCOUNT_CREATION', 'UNSPECIFIED']
+  owner_types: ['CUSTOMER', 'SYSTEM', 'UNSPECIFIED']
+  split_types: ['CREDIT', 'DEBIT', 'UNSPECIFIED']
+  limit_group_member_types: ['ACCOUNT', 'ACCOUNT_OWNER', 'PRODUCT', 'UNSPECIFIED']
+  customer_status: ['ACTIVE', 'CREATED', 'INACTIVE', 'UNSPECIFIED']
+  hash_function_types : ['SHA_256', 'UNSPECIFIED']
+  product_def_types: ['SYSTEM', 'CUSTOMER', 'UNSPECIFIED']
+  system_settings_types: ['HANDLER_LANGUAGE', 'HANDLER_TYPE', 'UNSPECIFIED']
+  gl_status_types: ['ACTIVE', 'INACTIVE', 'UNSPECIFIED']
+
+  command_termination_timeout: 3000 # seconds
+  command_read_timeout: 3000000 # ms
+  command_write_timeout: 3000000 # ms

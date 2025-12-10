@@ -1,0 +1,607 @@
+version: 2
+
+models:
+  - name: raw_turbine__account_requests
+    description: "This table contains raw request session attributes records from Turbine database. Each record contains a request ID, account title, product definition ID linked to the account, ccount currency, and owner metadata, which includes the owner type and ID, along with the record's creation metadata."
+    columns:
+      - name: id
+        description: "The account request ID which serves as the primary key of this table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the account request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the account request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: title
+        description: "The account title, such as the customer name for a customer account."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: currency
+        description: "The currency associated with the account"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: product_id
+        description: "The product_id of the product associated with the account"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: owners
+        description: "This field displays the account owner's metadata in a JSON-encoded string, including the owner ID and type, such as a system or customer owner."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: reference
+        description: "A unique reference string used to handle account request retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+      - name: operational_instruction
+        description: "Specifies the account operation mode (e.g., Single, Jointly, Survivor, etc.). It determines the approval logic for transactions, account closure, and other account related operations."
+        data_type: String
+
+  - name: raw_turbine__request_session_attributes
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - request_id
+            - attribute
+    description: "This table contains raw request session attributes records from Turbine database. Each record consists of a request_id, an attribute, its value that and the record's creation and update metadata. The value is used by handlers that are using the request session as a shared storage."
+    columns:
+      - name: request_id
+        description: "The id of the account or transaction request being made in turbine"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: attribute
+        description: "It specifies the type of attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: value
+        description: "The specific value corresponding to the defined attribute type."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the request session attribute's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the request session attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the request session attribute's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the request session attribute."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__callbacks
+    description: "This table contains raw callbacks records from Turbine database. Each record stores a callback ID, request ID for which the handlers are executing the callback function, callback type, which determines the structure of the data sent back, any additional metadata required for the callback, and callback's creation metadata"
+    columns:
+      - name: id
+        description: "The callback ID also serves as the primary key for this table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: "The id of the request for which these callbacks are being executed, can be an account or transaction request id"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: type
+        description: "Defines the type of callback which determines what kind of data would be send back to the callback function in the details column."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: details
+        description: "Details to be returned to the handler, based on the specified callback type, enabling the handler's instance to resume execution For example, it contains the task ID for a task, which is an instance of the handler, waiting for a callback to resume execution."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: metadata
+        description: "A JSON-encoded string that consists of any addtional information that might be required by the callback for its execution."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the callback's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the callback."
+        data_type: String
+
+  - name: raw_turbine__tasks
+    description: "This table contains raw tasks records from Turbine database. Each record contains information about a task, which is an instance of a handler. It includes the request ID associated with the task, an event occurring for the given request (such as account or transaction initialization), task's status, and a reason for that status along with it's create and update timestamps."
+    columns:
+      - name: id
+        description: "The id of the task, also serves as the primary key for this table."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: "The request ID for which the task is being executed."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: event
+        description: "Indicates the action being executed by the task, such as transaction initialization followed by the transaction itself in a transaction request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: parent
+        description: "Maintains a hierarchy of task IDs to determine if the task had a preceding parent task. If no parent exists, the task is considered its own parent, and the child node also includes the task's own ID."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: status
+        description: "Signifies the current status of the task e.g, WAITING, FAILED, FINISHED or IN_PROGRESS"
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('task_status_types') }}"
+      - name: join_parent
+        description: "A boolean field which is true if the task has a parent task and flase otherwise"
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: reference
+        description: "A unique reference string used to handle task execution retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: status_reason
+        description: "Specifies the reason for the status, such as in the case of failure, where it explains why the task failed—whether due to a missing handler or verification issues, or other factors."
+        data_type: String
+      - name: task_metadata
+        description: "Contains details such as whether the task was part of a batch, in which case it includes a batch key and batch ID, the type of request (e.g., account or transaction), and any other relevant information necessary for executing the task in a JSON-encoded string."
+        data_type: String
+      - name: create_date
+        description: "The timestamp for when the task was first created at"
+        data_type: DateTime64(6, 'GMT')
+        data_tests:
+          - not_null
+      - name: update_date
+        description: "The timestamp for when the task was first updated at"
+        data_type: Nullable(DateTime64(6, 'GMT'))
+      - name: executor_id
+        description: "Since Turbine runs on multiple instances, it is essential to track which instance executed a particular task. The executor ID serves this purpose, identifying the specific Turbine instance that processed the task. Each task is executed by only one instance."
+        data_type: Nullable(UUID)
+
+  - name: raw_turbine__txn_requests
+    description: "This table contains raw txn requests records from Turbine database. Each record provides detailed information about the type of transaction, the accounts involved (source and destination), associated currency, transaction amount, and its direction (Egress, Ingress or Internal). It also includes supplementary metadata for the request, along with creation and update metadata."
+    columns:
+      - name: id
+        description: "The ID of the transaction request made, also serves as the primary key for this table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: txn_code
+        description: "Indicates the transaction type based on the product, such as DBANK_TO_1LINK."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: from_account
+        description: "The account ID which made the transaction"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: from_account_ref_type
+        description: "Specifies the type of reference used to identify the account initiating the transaction instead of a UUID, such as ACCOUNT_ALIAS."
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_ref_types') }}"
+      - name: to_account
+        description: "The account ID receiving the transaction."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: to_account_ref_type
+        description: "Specifies the type of reference used to identify the account receiving the transaction instead of a UUID, such as ACCOUNT_ALIAS"
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('account_ref_types') }}"
+      - name: currency
+        description: "The currency in which the transaction is made"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: amount
+        description: "The amount of transaction made"
+        data_type: Decimal(29, 9)
+        data_tests:
+          - not_null
+      - name: event_trace
+        description: "A deprecated JSON-encoded string field which was previously used for debugging purposes using traces."
+        data_type: String
+      - name: direction
+        description: "Specifies whether the transaction is internal or external, categorizing it as either Egress or Ingress."
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('txn_direction_types') }}"
+      - name: associated_txn_request
+        description: "Stores the UUID of the associated child or parent transaction if one exists, such as in an INGRESS transaction where the parent represents the initiating transaction and the child represents the receiving transaction."
+        data_type: Nullable(UUID)
+      - name: associated_txn_type
+        description: "Indicates the type of associated transaction, specifying whether it is a parent or a child transaction."
+        data_type: String
+      - name: request_metadata
+        description: "Contains request-related details in a JSON-encoded string made by an account."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the transaction request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the transaction request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: batch_id
+        description: "When transactions are processed in batches, this field stores the batch ID associated with each transaction."
+        data_type: Nullable(UUID)
+      - name: reference
+        description: "A unique reference string used to handle transaction request retries, ensuring consistency instead of relying on changing UUIDs."
+        data_type: String
+
+  - name: raw_turbine__migration_requests
+    description: "This table contains raw migration requests records from Turbine database. Each record contains a request ID, ID of the product being migrated from, and ID of the product being migrated to. It also includes the migration status, reason for that status, and metadata fields for creation, updates, requests, and any other supplementary information."
+    columns:
+      - name: id
+        description: "The migration request ID which also serves as the primary key for migration_requests table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: from_product
+        description: "The existing product ID of product associated with the account"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: to_product
+        description: "The ID of the product to which account wants to migrate to"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: status
+        description: "Shows the failed or completed status of the migration"
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "Shows the reason if it fails and a success message if it's completed"
+        data_type: String
+      - name: request_metadata
+        description: "Shows the metadata of a request made in a JSON-encoded string."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: migration_metadata
+        description: "Contains migration-related metadata, such as current and desired counts, stored in a JSON-encoded string."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the migration request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the migration request's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the migration request."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__account_migration_requests
+    description: "This table contains raw account migration requests records from Turbine database. This table records all product definition migrations at the account level. Each entry includes the account ID undergoing migration, the migration ID representing the specific transition from one product to another (applicable to all accounts with that product), migration status, reason for that status, and metadata for creation and updates."
+    columns:
+      - name: id
+        description: "The id for account migration which also serves as the primary key for account_migration_requests table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: account_id
+        description: "The account ID to which the migration is applicable."
+        data_type: Nullable(UUID)
+      - name: migration_id
+        description: "The migration ID representing the transition from one product to another."
+        data_type: Nullable(UUID)
+      - name: status
+        description: "Shows the failed or completed status of the migration for an account"
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "Indicates the reasons behind a status, whether it is completed, failed, or otherwise."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the account migration request's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the account migration request."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the account migration request's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the account migration request."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__batches
+    description: "This table contains raw batches records from Turbine database. This table stores the batch ID, the file path containing the requests, and the creation and update metadata. The batching functionality enables a single gRPC call for a batch of transactions."
+    columns:
+      - name: id
+        description: "The ID of the batch, also serves as the primary key for batches table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: file_path
+        description: "The file path on an FTP server storing a batch of transactions."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the batch's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the batch."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the batch's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the batch."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__account_requests_metadata_history
+    description: "This table contains raw account requests metadata history records from Turbine database. Each record contains a unique ID to identify the changes across request_metadata for the same request_id."
+    columns:
+      - name: id
+        description: "Unique ID which also serves as the primary key for account_requests_metadata_history table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: "The account request ID associated with the recorded changes in request_metadata."
+        data_type: Nullable(UUID)
+      - name: request_metadata
+        description: "A JSON-encoded string containing the metadata required for account creation. The fields in this metadata are specific to the product being used by the account and may vary across different account requests."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the request metadata's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the request metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__account_requests_metadata_cursor
+    description: "This table contains raw account requests metadata cursor records from Turbine database. Each record includes both the request ID and ID of the most recently updated request_metadata. "
+    columns:
+      - name: request_id
+        description: "Unique request_id which also serves as the primary key for account_requests_metadata_cursor table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: metadata_id
+        description: "The id of latest request_metadata."
+        data_type: Nullable(UUID)
+
+  - name: raw_turbine__account_requests_status_history
+    description: "This table contains raw account requests status history records from Turbine database. Each record contains a unique ID to identify the changes across account creation status for the same request_id."
+    columns:
+      - name: id
+        description: "Unique ID which also serves as the primary key for account_requests_status_history table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: "The account request ID associated with the recorded changes in status."
+        data_type: Nullable(UUID)
+      - name: status
+        description: "indicates whether the account request is in one of the following states: UNSPECIFIED, PENDING, IN_PROGRESS, COMPLETED, FAILED, or PARENTAL."
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "The reason given usually when account request fails."
+        data_type: String
+        data_tests:
+          - status_reason_not_null:
+              column_name: "status_reason"
+              status_column: "status"
+      - name: create_metadata
+        description: "Stores metadata related to the request status' creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the request status."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__account_requests_status_cursor
+    description: "This table contains raw account requests status cursor records from Turbine database. Each record includes both the request ID and ID of the most recently updated request status."
+    columns:
+      - name: request_id
+        description: "Unique request_id which also serves as the primary key for account_requests_status_cursor table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: status_id
+        description: "The id of latest request status."
+        data_type: Nullable(UUID)
+
+  - name: raw_turbine__account_requests_output_metadata
+    description: "This table contains raw account requests output metadata records from Turbine database. Each record includes a request ID and any available output metadata generated after processing the request."
+    columns:
+      - name: request_id
+        description: "Unique request_id which also serves as the primary key for account_requests_output_metadata table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: output_metadata
+        description: "Stores metadata in a JSON-encoded string, if available, based on the product linked to the account after the account request is processed."
+        data_type: String
+      - name: update_metadata
+        description: "Stores metadata related to the metadata's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__txn_requests_status_history
+    description: >-
+      This table contains raw transaction requests status history records from
+       Turbine database. Each record contains a unique ID to identify the
+       changes across transaction creation status for the same request_id.
+    columns:
+      - name: id
+        description: >-
+          Unique ID which also serves as the primary key for
+           txn_requests_status_history table
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: >-
+          The transaction request ID associated with the recorded changes
+           in status.
+        data_type: Nullable(UUID)
+      - name: status
+        description: >-
+          Indicates whether the transaction request is in one of the following
+           states: UNSPECIFIED, PENDING, IN_PROGRESS, COMPLETED, FAILED,
+           or PARENTAL.
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: status_reason
+        description: "The reason given usually when transaction request fails."
+        data_type: String
+        data_tests:
+          - status_reason_not_null:
+              column_name: "status_reason"
+              status_column: "status"
+      - name: create_metadata
+        description: >-
+          Stores metadata related to the request status' creation in a
+           JSON-encoded string, including the creation timestamp and details
+            of the actor responsible for creating the request status.
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__txn_requests_status_cursor
+    description: >-
+      This table contains raw transaction requests status cursor records from
+       Turbine database. Each record includes both the request ID and ID of the
+       most recently updated request status.
+    columns:
+      - name: request_id
+        description: >-
+          Unique request_id which also serves as the primary key for
+           txn_requests_status_cursor table
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: status_id
+        description: "The id of latest request status."
+        data_type: Nullable(UUID)
+
+  - name: raw_turbine__txn_requests_pre_txn_status_history
+    description: >-
+      This table contains raw transaction requests status history records for
+       pre-transaction from Turbine database. Pre-transaction is an
+       optional transaction used to perform operations such as calculating the
+       transaction fee before submitting the actual transaction.  Each record
+       contains a unique ID to identify the changes across pre-transaction
+       creation status for the same request_id.
+    columns:
+      - name: id
+        description: >-
+          Unique ID which also serves as the primary key for
+           txn_requests_pre_txn_status_history table
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: request_id
+        description: >-
+          The transaction request ID associated with the recorded changes
+           in status.
+        data_type: Nullable(UUID)
+      - name: pre_txn_status
+        description: >-
+          Indicates whether the transaction request for pre-transaction is in
+           one of the following states: UNSPECIFIED, PENDING, IN_PROGRESS,
+           COMPLETED, FAILED, or PARENTAL.
+        data_type: String
+        data_tests:
+          - accepted_values:
+              values: "{{ var('req_status_types') }}"
+      - name: pre_txn_status_reason
+        description: >-
+          The reason given usually when transaction request for pre-transaction
+           fails.
+        data_type: String
+      - name: create_metadata
+        description: >-
+          Stores metadata related to the request status' creation in a
+           JSON-encoded string, including the creation timestamp and details of
+           the actor responsible for creating the request status.
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_turbine__txn_requests_pre_txn_status_cursor
+    description: >-
+     This table contains raw transaction requests status cursor records for
+      pre-transaction from Turbine database. Pre-transaction is an
+      optional transaction used to perform operations such as calculating the
+      transaction fee before submitting the actual transaction. Each record
+      includes both the request ID and ID of the most recently updated request
+      status.
+    columns:
+      - name: request_id
+        description: >-
+          Unique request_id which also serves as the primary key for
+           txn_requests_pre_txn_status_cursor table
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: pre_txn_status_id
+        description: "The id of latest request status."
+        data_type: Nullable(UUID)
+
+  - name: raw_turbine__txn_requests_output_metadata
+    description: >-
+      This table contains raw transaction requests output metadata records
+       from Turbine database. Each record includes a request ID and any
+       available output metadata generated after processing the request.
+    columns:
+      - name: request_id
+        description: >-
+          Unique request_id which also serves as the primary key for
+           txn_requests_output_metadata table"
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: output_metadata
+        description: "Stores metadata in a JSON-encoded string."
+        data_type: String
+      - name: update_metadata
+        description: >-
+          Stores metadata related to the metadata's updation in a JSON-encoded
+           string, including the update timestamp and details of the actor
+           responsible for updating the metadata.
+        data_type: String
+        data_tests:
+          - not_null

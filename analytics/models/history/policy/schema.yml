@@ -1,0 +1,172 @@
+version: 2
+
+models:
+  - name: hist_policy__policies
+    description: "Stores historical records of policies from the Policy database. Each record includes a unique policy hash, context the policy applies to, programming language used, execution strategy (or any rule-level overrides), a list of rules with their details, and the policy's creation and update metadata."
+    columns:
+      - name: hash
+        description: "A unique hash serving as the primary key for the policies table, with different hashes representing revisions of the same policy ID. It precisely identifies the policy version in use."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: id
+        description: "Identifier for the policy."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: type
+        description: "Defines the types of bindings a policy's rules have, specifying the contexts or events they apply to, such as createAccount, updateCustomer, or txn."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: lang
+        description: "A policy's rules must be written in a single supported programming language, and this defines which language is used."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: execution_strategy
+        description: "Specifies how the policy is executed—either linearly or simultaneously. In linear execution, the strategy determines whether it follows a first-match break (where the first rule with a true predicate is executed, and subsequent rules are ignored) or continuation until an explicit match-break (where rules continue executing until one with a true predicate is encountered with strategy overriden). Alternatively, the policy can be executed with simultaneous execution and consequence resolution."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+      - name: name
+        description: "Name of the policy."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: description
+        description: "Provides a brief description of the policy's purpose, such as verifying customer status or validating an attribute."
+        data_type: String
+      - name: rules
+        description: "A list of JSON-encoded strings containing the rule version, an active flag indicating whether the rule is active for this policy version, and a flag specifying if the policy execution strategy has been overridden at the rule level."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the policy's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the policy."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the policy's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the policy."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the policy record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the policy record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_policy__policy_tags
+    description: "Stores historical records of policy_tags from the Policy database. Policy tags act as a pointer system, enabling external systems to dynamically execute policies even as they evolve. This is achieved by associating a specific policy revision with a tag. Each record includes a policy ID with its corresponding tags, ensuring that each policy ID and tag pair is unique, identified by a distinct hash. A policy ID cannot have duplicate tags."
+    columns:
+      - name: policy_id
+        description: "Identifier of the policy"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: tag
+        description: "A tag linked to a policy to distinguish different versions as the policy evolves."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: hash
+        description: "A unique hash that identifies a specific policy version."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the policy tag record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the policy tag record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: hist_policy__rules
+    description: "Stores historical records of rules from the Policy database. Each rule consists of a predicate and a consequence and is always associated with a policy ID rather than its hash, as rules have their own versions while policies reference specific versions. Each record stores the rule version as a hash, the rule ID, associated policy ID, and other rule details, including its name, description, predicate, consequence, and creation and update metadata."
+    columns:
+      - name: hash
+        description: "A unique hash that identifies a specific version of a rule, ensuring version tracking and reference within a policy."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: id
+        description: "Identifier for the rule."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: policy_id
+        description: "Identifier for the policy associated with this rule."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: name
+        description: "Name of the rule."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: description
+        description: "A description of the rule, such as one specifying that a customer must be active."
+        data_type: String
+      - name: predicate
+        description: "A programmatic expression representing the rule's logic, which evaluates to a boolean value."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: consequences
+        description: "A JSONB-encoded string which consists of a programmatic expression that triggers specific actions or outcomes when the predicate condition evaluates to true."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the rule's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the rule."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the rule's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the rule."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the rule record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the rule record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null

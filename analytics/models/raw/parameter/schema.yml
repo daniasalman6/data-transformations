@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: raw_parameter__parameters
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - name
+                - namespace
+    description: "This table contains raw parameters records from parameter database. This table stores parameters used by Turbine to enhance reusability across multiple products and eliminate hard-coding. It serves as a centralized repository for parameters and values, such as fees, profit, transaction charges, and subscription fees, and is used by Turbine to process various transaction or account requests related to different product definitions."
+    columns:
+      - name: id
+        description: "The primary key for the parameters table, uniquely identifying each parameter record."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: "The exact name of the parameter that will be used in product definition"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: namespace
+        description: "The namespace provides context for the product associated with the parameter. For example, if the product is a current account, all parameters related to it will fall under the 'CURRENT_ACCOUNT' namespace."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: language
+        data_type: String
+        description: "The language of the handler that will use this parameter"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('parameter_languages') }}"
+      - name: value
+        data_type: String
+        description: "The exact value of the parameter"
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the parameter's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the parameter."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the parameter's updation in a JSON-encoded string, including the updation timestamp and details of the Actor responsible for updating the parameter."
+        data_type: String
+        data_tests:
+          - not_null

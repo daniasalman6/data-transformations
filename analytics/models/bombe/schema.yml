@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: customer_attributes
+    description: "Executes a python script to fetch a JSON string of customer attributes in decrypted form."
+    columns:
+      - name: customer_id
+        description: "The id of the customers having attributes stored in encrypted form."
+      - name: decrypted_attributes
+        description: "JSON string conatining key/value pair of decrypted attributes"

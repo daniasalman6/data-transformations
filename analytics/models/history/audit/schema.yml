@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: hist_audit__events
+    description: "Stores historical records of events from the Audit DB. Each record captures essential details, including the event timestamp, event name, affected entity's ID and type, actor's ID and type responsible for triggering the event, relevant metadata, event source, and any additional descriptions if applicable."
+    columns:
+      - name: id
+        description: "Used to identify the event."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: created_at
+        description: "The timestamp when the event occurred."
+        data_type: DateTime64(6, 'GMT')
+        data_tests:
+          - not_null
+      - name: name
+        description: "The name or category of the event, indicating what occurred, such as account creation, updates to customer attributes, or a transaction event."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: affected_id
+        description: "The unique identifier of the entity affected by the event e.g. customer or account id"
+        data_type: String
+      - name: affected_type
+        description: "Specifies the type of the entity affected by the event e.g. customer, account or instrument"
+        data_type: LowCardinality(Nullable(String))
+      - name: actor_id
+        description: "The unique identifier of the actor responsible for the event"
+        data_type: Nullable(UUID)
+      - name: actor_type
+        description: "Specifies the role or type of the actor responsible for the event, such as a user or system."
+        data_type: LowCardinality(Nullable(String))
+      - name: tags
+        description: "A JSONB-encoded String used to assign any tags or labels to an event if needed."
+        data_type: String
+      - name: metadata
+        description: "A JSON-encoded string containing additional metadata about the event, such as previous and updated values in the case of customer attribute changes."
+        data_type: String
+      - name: description
+        description: "A textual explanation providing additional details about certain events if needed."
+        data_type: String
+      - name: source
+        description: "Specifies the source of the event, such as the originating system or service."
+        data_type: LowCardinality(Nullable(String))
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the attribute type record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the event record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null

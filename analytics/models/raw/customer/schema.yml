@@ -1,0 +1,304 @@
+version: 2
+
+models:
+  - name: raw_customer__customers
+    description: "The table contains raw customer records from Customer database. Each record includes a unique customer ID, its current status (e.g., created, active, or inactive), and metadata for status changes, creation and updates."
+    columns:
+      - name: id
+        description: "The customer id which uniquely identifies a customer."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: status
+        description: "Indicates the current status of the customer, showing whether they are active or not."
+        data_type: String
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('customer_status') }}"
+      - name: status_metadata
+        description: "Stores the metadata related to the status of the customer in a JSON-encoded string."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the customer's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the customer."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to customer's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the customer."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__type_definitions
+    description: "This table stores raw type definitions records from Customer database. Each record defines unique customer attribute types, such as email, phone number, or CNIC, along with their encryption status, associated encryption details (if applicable), and metadata for creation and updates."
+    columns:
+      - name: type
+        description: "The primary key of the type_definitions table which also defines what type of attribute this is e.g. email, phone number etc."
+        data_type: String
+        data_tests:
+          - unique
+          - not_null
+      - name: encrypted
+        description: "A boolean value to specify whether the attribute with this type will be encrypted or not."
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: salt
+        description: "A random value added to sensitive data (e.g., passwords) before hashing to ensure uniqueness and security"
+        data_type: String
+      - name: hash_function
+        description: "Specifies the hash function for encrypted attributes"
+        data_type: String
+        data_tests:
+          - accepted_values:
+              values: "{{ var('hash_function_types') }}"
+      - name: validation_regex
+        description: "A regex pattern used to validate that the value conforms to the expected format e.g. email, phone number."
+        data_type: String
+      - name: allowed_values
+        description: "A JSONB-encoded string that optionally sets allowed values for a specific attribute if needed"
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the type definition's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the type definition."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the type definition's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the type definition."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__attributes
+    description: "The table contains raw attributes records from Customer database. Each attribute is identified by a unique ID and includes the attribute key defining its purpose, the exact value, its hash (if encrypted), and metadata for creation and updates."
+    columns:
+      - name: id
+        description: "The attribute id, which is also the primary key of this table, uniquely identifies an attribute."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "The id of customer that the attribute is associated with"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: value
+        description: "The value of the attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: key
+        description: "Determines the specific value that an attribute represents"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: hash
+        description: "The hash or encrypted version of the attribute value."
+        data_type: String
+      - name: permissions
+        description: "A JSON-encoded string specifying different permissions allowed for an attribute."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the attribute's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the attribute's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the attribute."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__credentials
+    description: "The table contains raw credentials records from Customer database. Each record for a credential has an ID linked to a customer ID, along with the customer's hashed username and password, the credential type, and metadata for creation.."
+    columns:
+      - name: id
+        description: "The credential id, which is also the primary key of the credentials table, uniquely identifies a credential."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "The id of customer that the credential is associated with"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: username
+        description: "The username of the customer associated with the credential"
+        data_type: String
+      - name: credentials
+        description: "Contains the encrypted values of the credentials i.e. username + password"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: type
+        description: "Defines the type of entity the credentials are associated with e.g. DGlobal"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: expiry
+        description: "The time(stamp) at which the credential expires"
+        data_type: Nullable(DateTime64(6, 'GMT'))
+      - name: create_metadata
+        description: "Stores metadata related to the credential's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the credential."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__key_definitions
+    description: "This table stores raw key definitions records from Customer database. Each record defines unique key for customer attributes, specifying their context, particularly for client-specific attributes. It also includes metadata for the key, its creation and updates, and allowed permissions."
+    columns:
+      - name: key
+        description: "The key, which is also the primary key of the key_definitions table, determines the specific value that an attribute represents."
+        data_type: String
+        data_tests:
+          - unique
+          - not_null
+      - name: type
+        description: "Foreign key from the type_definitions table which defines what type of attribute this is e.g. phone, issued_id etc."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: permissions
+        description: "A JSON-encoded string specifying different permissions allowed for an attribute's key. Mainly create, update, delete and read permissions"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: metadata
+        description: "Contains metadata associated with this key in a JSON-encoded string"
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the key definition's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the key definition."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the key definition's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the key definition."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__sign_in_attribute_verifications
+    description: "This table stores raw sign in attribute verification records from Customer database. Each record includes a verification ID, customer's ID, a key defining the sign-in attribute's context, its hashed value, and the number of setup attempts made for customer sign-up, along with successful and unsuccessful validation attempts."
+    columns:
+      - name: id
+        description: "The sign in attribute verification id, which is also the primary key of this table, uniquely identifies a sign in attribute verification."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: owner_id
+        description: "The owner or customer whose sign in attribute is being verified"
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: key
+        description: "Determines the specific value that a sign in attribute represents."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: hash
+        description: "Contains the hashed value of the sign in attribute verification"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: setup_attempts
+        description: "How many times a customer's sign in attribute has been setup"
+        data_type: Int32
+        data_tests:
+          - not_null
+          - assert_value_greater_than_zero
+      - name: unsuccessful_validation_attempts
+        description: "The amount of times a sign in attribute's validation failed"
+        data_type: Int32
+        data_tests:
+          - not_null
+      - name: successful_validation_attempts
+        description: "The amount of times a sign in attribute's validation was successful"
+        data_type: Int32
+        data_tests:
+          - not_null
+      - name: context
+        description: "Represents the state that the provider must maintain for a given verification instance, enabling relevant subsequent operations for the verification process. It can be used to store secret data, as it is encrypted."
+        data_type: String
+
+  - name: raw_customer__sign_in_attributes
+    description: "This table stores raw sign in attributes records from Customer database. Each record includes either the verified customer ID or the unverified customer ID, along with an attribute key defining its context (e.g., phone or CNIC), an encrypted value, its verification status, and metadata for creation and updates."
+    columns:
+      - name: id
+        description: "The sign in attribute id, which is also the primary key of the sign_in_attributes table, uniquely identifies a attribute."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "The verified customer who is associated with this sign in attribute"
+        data_type: Nullable(UUID)
+      - name: unverified_customer_id
+        description: "The id of the unverified customer for the given sign in attribute"
+        data_type: Nullable(UUID)
+      - name: key
+        description: "Determines the specific value that a sign in attribute represents."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: value
+        description: "Contains the value for the sign in attribute"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: hash
+        description: "Contains the hashed value of the sign in attribute"
+        data_type: String
+        data_tests:
+          - not_null
+      - name: verified
+        description: "A boolean value that tells whether the sign in attribute is verified or not"
+        data_type: Bool
+        data_tests:
+          - not_null
+      - name: create_metadata
+        description: "Stores metadata related to the sign in attribute's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the sign in attribute."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the sign in attribute's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the sign in attribute."
+        data_type: String
+        data_tests:
+          - not_null
+
+  - name: raw_customer__unverified_customers
+    description: "This table stores raw unverified customers' records from Customer database. Each record includes a customer's hashed sign-in attribute (such as phone number or CNIC), number of verification attempts, and metadata for creation and updates."
+    columns:
+      - name: id
+        description: "The unverified customer id, which is also the primary key of the unnverified_customers table, uniquely identifies a customer."
+        data_type: UUID
+        data_tests:
+          - unique
+          - not_null
+      - name: sign_in_attribute_hash
+        description: "Contains the encrypted value of the sign in attribute (e.g. phone number or CNIC)"
+        data_type: String
+      - name: attempts
+        description: "The number of verification attempts made."
+        data_type: Int32
+        data_tests:
+          - not_null
+          - assert_value_greater_than_zero
+      - name: metadata
+        description: "Metadata for unverified customers in a JSON-encoded string"
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the unverified customer's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the unverified customer."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_metadata
+        description: "Stores metadata related to the unverified customer's updates in a JSON-encoded string, including the update timestamp and details of the Actor responsible for updating the unverified customer."
+        data_type: String
+        data_tests:
+          - not_null

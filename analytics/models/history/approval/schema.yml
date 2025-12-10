@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: hist_approval__approvals
+    description: "Stores historical records of approvals from the Approval database. Each record includes an approval ID, request ID it corresponds to, approval status, approver metadata, and the approval's creation metadata."
+    columns:
+      - name: id
+        description: "The primary key for the approvals table representing the approval id."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: request_id
+        description: "Identifies the request that requires approval."
+        data_type: UUID
+        data_tests:
+          - not_null
+      - name: status
+        description: "The status of the approval request, which can be one of the following: DENIED, APPROVED, IN_PROGRESS, REVIEW, or PENDING."
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('approval_status_types') }}"
+      - name: method
+        description: "Tells whether the approval was AUTO or MANUAL"
+        data_type: LowCardinality(String)
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: "{{ var('approval_method_types') }}"
+      - name: approvers
+        description: "Gives details of approvers in a JSON-encoded string. If the method is MANUAL, the string field contains the user ID of the approver. In the case of AUTO approval, the approval is based on a policy, so the string includes the policy hash to identify the exact policy version used, along with the predicate and consequences of the policy rule."
+        data_type: String
+      - name: terminal_actions
+        description: "A JSON-encoded string used to finalize a task, preventing any further modifications. For example, this field specifies the type of information returned to confirm the task's completion, such as the task or request ID associated with the approval."
+        data_type: String
+      - name: immediate_actions
+        description: "A JSON-encoded string used to modify the task state without finalizing it, such as assigning the task to a user or unassigning it from someone."
+        data_type: String
+      - name: metadata
+        description: "A JSON-encoded string containing additional information needed for the approval."
+        data_type: String
+      - name: create_metadata
+        description: "Stores metadata related to the approval's creation in a JSON-encoded string, including the creation timestamp and details of the Actor responsible for creating the approval."
+        data_type: String
+        data_tests:
+          - not_null
+      - name: update_timestamp
+        description: "The timestamp provided by Airbyte when the attribute type record was created, updated, or deleted."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: delete_timestamp
+        description: "The timestamp when the approval record was deleted."
+        data_type: Nullable(DateTime64(3, 'GMT'))
+      - name: emission_timestamp
+        description: "Timestamp when the record was emitted from the source to the destination during the sync process."
+        data_type: DateTime64(3, 'GMT')
+        data_tests:
+          - not_null
+      - name: _airbyte_data
+        description: "Contains a JSON-encoded string of the full record, including all original table fields and additional metadata."
+        data_type: String
+        data_tests:
+          - not_null
