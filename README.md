@@ -54,12 +54,6 @@ The **data_transformations** project manages ETL processes with **Dagster** for 
 - **tests/**
   Contains unit tests for the Dagster components to ensure functionality.
 
-- **.github/**
-  Contains GitHub Actions workflows:
-  - **pr-build.yml**: Runs build checks on pull requests.
-  - **pr-coverage.yml**: Reports test coverage.
-  - **push.yml**: Builds and pushes Docker images.
-
 - **Dockerfile**
   Dockerfile for containerizing the project for consistent deployment.
 
@@ -69,9 +63,6 @@ The **data_transformations** project manages ETL processes with **Dagster** for 
 - **poetry.toml**
   Configuration file for Poetry settings.
 
-- **.env.example**
-  A sample `.env` file for setting up environment variables.
-
 - **pyproject.toml**
   Central configuration file specifying dependencies, project metadata, and settings.
 
@@ -80,9 +71,6 @@ The **data_transformations** project manages ETL processes with **Dagster** for 
 
 - **Makefile**
   Provides various commands for project setup, testing, linting, and more.
-
-- **.pre-commit-config.yaml**
-  Configures pre-commit hooks to enforce coding standards and ensure code quality.
 
 ## Development Guide
 
