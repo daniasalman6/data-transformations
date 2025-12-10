@@ -105,12 +105,3 @@ make test
   make clean
   ```
 
----
-
-## CI/CD Pipeline
-
-The CI/CD pipeline runs with each pull request or update to `main`. It includes:
-
-- **Build**: Verifies project integrity.
-- **Coverage**: Tracks test coverage.
-- **Code Quality**: Lints and checks code style.
