@@ -1,13 +1,6 @@
 # data_transformations
 
-[![Push on main](https://github.com/din-global/data-transformations/actions/workflows/push.yaml/badge.svg)](https://github.com/din-global/data-transformations/actions/workflows/push.yaml)
-[![pr-coverage](https://github.com/din-global/data-transformations/actions/workflows/pr-coverage.yaml/badge.svg)](https://github.com/din-global/data-transformations/actions/workflows/pr-coverage.yaml)
-[![pr-build](https://github.com/din-global/data-transformations/actions/workflows/pr-build.yaml/badge.svg)](https://github.com/din-global/data-transformations/actions/workflows/pr-build.yaml)
-
-
 The **data_transformations** project manages ETL processes with **Dagster** for orchestration and **DBT** for transformations.
-
-- **Repository**: [data-transformations](https://github.com/din-global/data-transformations/)
 
 ## Getting Started
 
